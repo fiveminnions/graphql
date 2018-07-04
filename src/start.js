@@ -17,34 +17,21 @@ const prepare = (o) => {
 export const start = async () => {
   try {
     const db = await MongoClient.connect(MONGO_URL)
-
-    const Posts = db.collection('posts')
-    const Comments = db.collection('comments')
     const UserDetails = db.collection('jobs_applied')
+    const Feedbacks = db.collection('feedback')
 
     const typeDefs = [`
       type Query {
-        post(_id: String): Post
-        posts: [Post]
-        comment(_id: String): Comment
-        details(email: String): Detail
-        progress: [Progress]
+       details(email: String): Detail
       }
-
-      type Post {
-        _id: String
-        title: String
-        content: String
-        comments: [Comment]
+      type Feedback{
+        email: String!,
+        question1: Int,
+        question2: Int,
+        question3: Int,
+        question4: Int,
+        comment: String
       }
-
-      type Comment {
-        _id: String
-        postId: String
-        content: String
-        post: Post
-      }
-
       type Detail {
         _id: String
         user_name: String,
@@ -52,11 +39,18 @@ export const start = async () => {
         password: String,
         first_name: String,
         last_name: String,
-        jobid: String,
-        designation : String,
-        skill: String,
-        location: String,
-        progressDetails : [Progress]
+        jobInfo: [JobInfo]
+        
+     }
+     type JobInfo{
+      jobId: String,
+      designation : String,
+      skill: String,
+      location: String,
+      hiringManager: String,
+      hiringHr: String,
+      progressDetails : [Progress],
+      detail : [Detail]
      }
 
      type Progress{
@@ -65,13 +59,12 @@ export const start = async () => {
 			feedback: String,
 			result: String,
       date: String,
-      details : Detail
+      jobInfo : JobInfo
      }
 
       type Mutation {
-        createPost(title: String, content: String): Post
-        createComment(postId: String, content: String): Comment
         createDetails(user_name: String, email: String, password: String): Detail
+        createFeedbacks(email: String,question1 : Int,question2 : Int,question3 : Int,question4 : Int,comment : String) : Feedback
       }
 
       schema {
@@ -82,45 +75,20 @@ export const start = async () => {
 
     const resolvers = {
       Query: {
-        post: async (root, {_id}) => {
-          return prepare(await Posts.findOne(ObjectId(_id)))
-        },
-        posts: async () => {
-          return (await Posts.find({}).toArray()).map(prepare)
-        },
-        comment: async (root, {_id}) => {
-          return prepare(await Comments.findOne(ObjectId(_id)))
-        },
         details: async (root, {email}) => {
           return (await UserDetails.findOne({"email" :email}))
         },
-        progress: async (root, {email}) => {
-          return (await UserDetails.find({}).toArray()).map(prepare)
-        },
-      },
-      Post: {
-        comments: async ({_id}) => {
-          return (await Comments.find({postId: _id}).toArray()).map(prepare)
-        }
-      },
-      Comment: {
-        post: async ({postId}) => {
-          return prepare(await Posts.findOne(ObjectId(postId)))
-        }
       },
       Mutation: {
-        createPost: async (root, args, context, info) => {
-          const res = await Posts.insert(args)
-          return prepare(await Posts.findOne({_id: res.insertedIds[1]}))
-        },
-        createComment: async (root, args) => {
-          const res = await Comments.insert(args)
-          return prepare(await Comments.findOne({_id: res.insertedIds[1]}))
-        },
-        createDetails: async (root, args) => {
+       createDetails: async (root, args) => {
           const res = await UserDetails.insert(args)
           console.log(res)
           return prepare(await UserDetails.findOne({_id: res.insertedIds[1]}))
+        },
+        createFeedbacks: async (root, args) => {
+          const res = await Feedbacks.insert(args)
+          console.log(res)
+          return prepare(await Feedbacks.findOne({_id: res.insertedIds[1]}))
         },
       },
     }
